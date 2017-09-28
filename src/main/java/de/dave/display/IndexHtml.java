@@ -15,8 +15,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 
 /**
- * Representation of the index.html.
- * Interface to add/delete/manipulate data.
+ * Representation of the index.html. Interface to add/delete/manipulate data.
  * 
  * @author david.hinske
  */
@@ -49,11 +48,15 @@ public class IndexHtml {
 	}
 
 	/**
-	 * Add a new row. If the row already exists, the existing value will be overwritten.
+	 * Add a new row. If the row already exists, the existing value will be
+	 * overwritten.
 	 * 
-	 * @param name		name of the row which should be changed/created
-	 * @param key		name of the column which should be changed
-	 * @param value		value of the table-body
+	 * @param name
+	 *            name of the row which should be changed/created
+	 * @param key
+	 *            name of the column which should be changed
+	 * @param value
+	 *            value of the table-body
 	 */
 	void addRow(String name, String key, String value) {
 		if (!getAllTableHeaders().contains(key)) {
@@ -64,7 +67,7 @@ public class IndexHtml {
 		LOGGER.info("Found primary key");
 		Node data = getRow(name);
 		if (data == null) {
-			LOGGER.log(Level.INFO, "No data found for " + name + ", creating new row!");
+			LOGGER.log(Level.INFO, "No data found for " + name + ", creating it");
 			Element tbody = document.getElementsByTag(TBODY).first();
 			Element tr = document.createElement(TR);
 			for (String head : getAllTableHeaders()) {
@@ -73,12 +76,16 @@ public class IndexHtml {
 					td.text(name);
 				}
 				if (key.equals(head)) {
-					td.text(value);
+					Element valueElement = createElementsForValue(value);
+					if (valueElement == null) {
+						td.text(value);
+					} else {
+						td.appendChild(valueElement);
+					}
 				}
 				tr.appendChild(td);
 			}
 			tbody.appendChild(tr);
-
 		} else {
 			List<Node> dataChildren = data.childNodes();
 
@@ -88,8 +95,16 @@ public class IndexHtml {
 				if (dataChildren.get(i).nodeName().equals(TD)) {
 					if (nodeCount == getTableHeaderPosition(key)) {
 						LOGGER.log(Level.INFO, "Found element at position " + nodeCount);
-						if (dataChildren.get(i) instanceof Element) {
-							((Element) dataChildren.get(i)).text(value);
+						Element valueElement = createElementsForValue(value);
+						if (valueElement == null) {
+							if (dataChildren.get(i) instanceof Element) {
+								((Element) dataChildren.get(i)).text(value);
+							}
+						} else {
+							if (dataChildren.get(i) instanceof Element) {
+								((Element) dataChildren.get(i)).text("");
+								((Element) dataChildren.get(i)).appendChild(valueElement);
+							}
 						}
 						break;
 					}
@@ -100,10 +115,38 @@ public class IndexHtml {
 	}
 
 	/**
-	 * Returns the complete table-row (<tr>...</tr>) of a given key.
+	 * Checks if a value for a row contains tags. If yes, The Element which can
+	 * be attached will be returned, otherwise null.
 	 * 
-	 * @param name	the value of the first table-data
-	 * @return 		the row which first data equals the given name (<td>name</td>)
+	 * @param value
+	 * @return If the value contains tags, the Element which can be attached,
+	 *         otherwise null.
+	 */
+	Element createElementsForValue(String value) {
+		if (!(value.startsWith("<") && value.endsWith(">"))) {
+			return null;
+		}
+		LOGGER.log(Level.INFO, "Found tags in value, adding HTML-Elements.");
+		try {
+			Document valueDocument = Jsoup.parse(value);
+			return valueDocument.getElementsByTag("body").first().child(0);
+		} catch (Exception e) {
+			LOGGER.log(Level.INFO, "Value cannot be parsed for HTML-Elements properly, writing plain text.");
+			return null;
+		}
+	}
+
+	/**
+	 * Returns the complete table-row (
+	 * <tr>
+	 * ...
+	 * </tr>
+	 * ) of a given key.
+	 * 
+	 * @param name
+	 *            the value of the first table-data
+	 * @return the row which first data equals the given name (
+	 *         <td>name</td>)
 	 */
 	Node getRow(String name) {
 		Element tbody = document.getElementsByTag(TBODY).first();
@@ -123,9 +166,11 @@ public class IndexHtml {
 	}
 
 	/**
-	 * Adds a new column to the table. All existing table-bodies will get table-row. 
+	 * Adds a new column to the table. All existing table-bodies will get
+	 * table-row.
 	 * 
-	 * @param name	name of the table
+	 * @param name
+	 *            name of the table
 	 */
 	void addColumn(String name) {
 		LOGGER.log(Level.INFO, "Adding new column: " + name);
@@ -165,9 +210,11 @@ public class IndexHtml {
 	}
 
 	/**
-	 * Remove an existing column (table-head with all columns in the table-bodies).
+	 * Remove an existing column (table-head with all columns in the
+	 * table-bodies).
 	 * 
-	 * @param name	name of the column which will be removed
+	 * @param name
+	 *            name of the column which will be removed
 	 */
 	void removeColumn(String name) {
 		int position = getTableHeaderPosition(name);
@@ -182,7 +229,8 @@ public class IndexHtml {
 	/**
 	 * Remove an existing row (table-body).
 	 * 
-	 * @param name	name of the row which will be removed
+	 * @param name
+	 *            name of the row which will be removed
 	 */
 	void removeRow(String name) {
 		for (int i = 0; i < document.getElementsByTag(TBODY).first().getElementsByTag("tr").size(); i++) {
@@ -194,7 +242,8 @@ public class IndexHtml {
 
 	/**
 	 * 
-	 * @param name	name of the table-header
+	 * @param name
+	 *            name of the table-header
 	 * @return place of occurence of the table-header, starting at 0
 	 */
 	private int getTableHeaderPosition(String name) {
@@ -254,6 +303,7 @@ public class IndexHtml {
 			PrintWriter writer = new PrintWriter(path, "UTF-8");
 			writer.println(document.toString());
 			writer.close();
+
 		} catch (IOException e) {
 			LOGGER.severe("Could not write to " + path + " " + e);
 		}
