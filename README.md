@@ -1,6 +1,8 @@
 # Information-Display
 A Service-/Database-less approach to keep track of any information you would like to display. Java needs to be installed on the target machine.
 
+![alt text](https://github.com/dhinske/information-display/tree/master/src/main/resources/example-display.png "Example")
+
 The structure of the index.html is a simple table:
 ```
   <table class="container"> 
